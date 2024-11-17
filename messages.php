@@ -2,7 +2,7 @@
 include_once "classes/Page.php";
 include_once "classes/Db.php";
 Page::display_header("Messages");
-$db = new Db("localhost", "root", "root", "news");
+$db = new Db("127.0.0.1", "root", "", "news");
 
 // adding new message
 if (isset($_REQUEST['add_message'])) {

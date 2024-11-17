@@ -45,9 +45,10 @@ class Db
             return false;
         }
 
-        $name = Filter::filter($name, 'Name');
-        $content = Filter::filter($name, 'Content');
+        $name = Filter::filter($name, 'name');
+        $content = Filter::filter($content, 'content');
 
+        // SQL query to insert the new message
         $sql = "INSERT INTO message (`name`, `type`, `message`, `deleted`)
                 VALUES (:name, :type, :content, 0)";
         try {
@@ -71,8 +72,8 @@ class Db
             return false;
         }
 
-        $name = Filter::filter($name, 'Name');
-        $content = Filter::filter($name, 'Content');
+        $name = Filter::filter($name, 'name');
+        $content = Filter::filter($content, 'content');
 
         $sql = "UPDATE message SET `name` = :name, `type` = :type, `message` = :content WHERE id = :id";
         try {
@@ -96,7 +97,8 @@ class Db
         return $this->select($sql, [':id' => $message_id]);
     }
 
-    public function getFilteredMessages($searchTerm) {
+    public function getFilteredMessages($searchTerm)
+    {
         $searchTerm = '%' . trim($searchTerm) . '%';
 
         $sql = "SELECT * FROM message WHERE name LIKE :searchTerm";

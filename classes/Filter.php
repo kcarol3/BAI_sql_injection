@@ -4,22 +4,25 @@ class Filter
 {
     public static function filterName($name)
     {
-        return filter_var(trim($name), FILTER_SANITIZE_STRING);
+        return htmlspecialchars(trim($name), ENT_QUOTES, 'UTF-8');
     }
 
     public static function filterEmail($email)
     {
-        return filter_var(trim($email), FILTER_VALIDATE_EMAIL);
+        $email = filter_var(trim($email), FILTER_VALIDATE_EMAIL);
+        return $email ? htmlspecialchars($email, ENT_QUOTES, 'UTF-8') : false;
     }
 
     public static function filterURL($url)
     {
-        return filter_var(trim($url), FILTER_VALIDATE_URL);
+        $url = filter_var(trim($url), FILTER_VALIDATE_URL);
+        return $url ? htmlspecialchars($url, ENT_QUOTES, 'UTF-8') : false;
     }
 
     public static function filterContent($content)
     {
-        return filter_var(trim($content), FILTER_SANITIZE_STRING);
+        // Trim spaces and escape HTML characters
+        return htmlspecialchars(trim($content), ENT_QUOTES, 'UTF-8');
     }
 
     public static function filter($data, $type)
@@ -36,3 +39,4 @@ class Filter
         }
     }
 }
+
