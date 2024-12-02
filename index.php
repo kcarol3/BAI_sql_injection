@@ -1,10 +1,8 @@
 <?php
 include_once "classes/Page.php";
-Page::display_header("Main page");
-?>
-<H2> Main page</H2>
-<?php
+include_once "classes/Pdo_.php";
+
+require "checkSession.php";
+
 Page::display_navigation();
 ?>
-</body>
-</html>

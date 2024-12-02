@@ -5,6 +5,7 @@ Page::display_header("Add message");
 $db = new Db("127.0.0.1", "root", "", "news");
 
 $message = \get_object_vars($db->getMessage($_GET['id'])[0]);
+
 ?>
 <hr>
 <P> Update message</P>
