@@ -73,7 +73,9 @@ VALUES (:login,:email,:hash,:salt,:id_status,:password_form, :enc_password)";
             if ($password == $this->aes->decrypt($user_data['enc_password'])) {
                 $_SESSION['logged_in'] = true;
                 $_SESSION['user'] = $login;
-                $_SESSION['expiry_time'] = time() + 300;
+                $_SESSION['expiry_time'] = time() + 3000;
+
+                $this->get_privileges($login);
                 echo 'Successful login<BR/>';
 
                 header( 'Location: index.php');
@@ -120,4 +122,24 @@ VALUES (:login,:email,:hash,:salt,:id_status,:password_form, :enc_password)";
             return 'Exception' . $e->getMessage();
         }
     }
+
+    public function get_privileges($login)
+    {
+        try {
+            $sql = "SELECT p.id,p.name FROM privilege p"
+                ." INNER JOIN user_privilege up ON p.id=up.id_privilege" ." INNER JOIN user u ON u.id=up.id_user"
+                ." WHERE u.login=:login";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute(['login' => $login]);
+            $data = $stmt->fetchAll();
+            foreach ($data as $row) {
+                $privilege=$row['name'];
+                $_SESSION[$privilege]='YES'; }
+            $data['status']='success';
+            return $data;
+        } catch (Exception $e) {
+            print 'Exception' . $e->getMessage(); }
+        return [
+            'status' => 'failed'
+        ]; }
 }

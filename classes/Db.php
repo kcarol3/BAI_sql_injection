@@ -4,6 +4,16 @@ include_once "Filter.php";
 class Db
 {
     private $pdo;
+
+    public function getPdo(): PDO
+    {
+        return $this->pdo;
+    }
+
+    public function setPdo(PDO $pdo)
+    {
+        $this->pdo = $pdo;
+    }
     private $select_result;
     private $allowed_types = ['public', 'private'];
 
@@ -97,6 +107,18 @@ class Db
         return $this->select($sql, [':id' => $message_id]);
     }
 
+    public function deleteMessage($message_id)
+    {
+        $sql = "DELETE FROM message WHERE id = :id";
+
+        $stmt = $this->pdo->prepare($sql);
+
+        $result = $stmt->execute([':id' => $message_id]);
+
+        return $result;
+    }
+
+
     public function getFilteredMessages($searchTerm)
     {
         $searchTerm = '%' . trim($searchTerm) . '%';
@@ -110,4 +132,125 @@ class Db
 
         return $stmt->fetchAll(PDO::FETCH_OBJ);
     }
+
+    public function get_privileges($login)
+    {
+        try {
+            $sql = "SELECT p.id,p.name FROM privilege p"
+                ." INNER JOIN user_privilege up ON p.id=up.id_privilege" ." INNER JOIN user u ON u.id=up.id_user"
+                ." WHERE u.login=:login";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute(['login' => $login]);
+            $data = $stmt->fetchAll();
+            foreach ($data as $row) {
+                $privilege=$row['name'];
+                $_SESSION[$privilege]='YES'; }
+            $data['status']='success';
+            return $data;
+        } catch (Exception $e) {
+            print 'Exception' . $e->getMessage(); }
+        return [
+            'status' => 'failed'
+        ]; }
+
+    function getAllPermissions() {
+        $stmt = $this->pdo->query("SELECT * FROM privilege");
+        return $stmt->fetchAll();
+    }
+
+    function addPermission($name) {
+        $stmt = $this->pdo->prepare("INSERT INTO privilege (name, active) VALUES (:name, 1)");
+        return $stmt->execute([':name' => $name]);
+    }
+
+    function deletePermission($id) {
+        $stmt = $this->pdo->prepare("DELETE FROM privilege WHERE id = :id");
+        return $stmt->execute([':id' => $id]);
+    }
+
+    function getAllRoles() {
+        $stmt = $this->pdo->query("SELECT * FROM role");
+        return $stmt->fetchAll();
+    }
+
+    function addRole($roleName, $description) {
+        $stmt = $this->pdo->prepare("INSERT INTO role (role_name, description) VALUES (:role_name, :description)");
+        return $stmt->execute([':role_name' => $roleName, ':description' => $description]);
+    }
+
+    function deleteRole($roleId) {
+        $stmt = $this->pdo->prepare("DELETE FROM role WHERE id = :id");
+        return $stmt->execute([':id' => $roleId]);
+    }
+
+    function addUserRole($userId, $roleId, $issueTime, $expireTime = null) {
+        $stmt = $this->pdo->prepare("
+        INSERT INTO user_role (id_user, id_role, issue_time, expire_time)
+        VALUES (:id_user, :id_role, :issue_time, :expire_time)
+    ");
+        return $stmt->execute([
+            ':id_user' => $userId,
+            ':id_role' => $roleId,
+            ':issue_time' => $issueTime,
+            ':expire_time' => $expireTime,
+        ]);
+    }
+
+    function removeUserRole($userRoleId) {
+        $stmt = $this->db->prepare("DELETE FROM user_role WHERE id = :id");
+        return $stmt->execute([':id' => $userRoleId]);
+    }
+
+    function getRolesWithPermissions() {
+        try {
+            $sql = "
+            SELECT 
+                r.id AS role_id, 
+                r.role_name, 
+                r.description, 
+                p.id AS permission_id, 
+                p.name AS permission_name, 
+                p.asset_url
+            FROM role r
+            LEFT JOIN role_privilege rp ON r.id = rp.id_role
+            LEFT JOIN privilege p ON rp.id_privilege = p.id
+            ORDER BY r.role_name, p.name;
+        ";
+
+            // Wykonaj zapytanie
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute();
+
+            // Grupowanie wyników: role z przypisanymi permissions
+            $roles = [];
+            while ($row = $stmt->fetch(2)) {
+                $roleId = $row['role_id'];
+
+                // Jeśli rola nie została jeszcze dodana, dodaj ją
+                if (!isset($roles[$roleId])) {
+                    $roles[$roleId] = [
+                        'id' => $row['role_id'],
+                        'name' => $row['role_name'],
+                        'description' => $row['description'],
+                        'permissions' => [],
+                    ];
+                }
+
+                // Jeśli permission istnieje, dodaj go do danej roli
+                if ($row['permission_id']) {
+                    $roles[$roleId]['permissions'][] = [
+                        'id' => $row['permission_id'],
+                        'name' => $row['permission_name'],
+                        'asset_url' => $row['asset_url']
+                    ];
+                }
+            }
+
+            return $roles;
+        } catch (Exception $e) {
+            // Obsłuż błąd
+            throw new Exception("Error fetching roles with permissions: " . $e->getMessage());
+        }
+    }
+
 }

@@ -38,14 +38,26 @@ if (isset($_REQUEST['update'])) {
      $sql = "SELECT * FROM message";
      $messages = $db->select($sql);
  }
-
+ function hasPermission($permissionName) {
+     if (isset($_SESSION['permissions'])) {
+         return in_array($permissionName, $_SESSION['permissions']);
+     }
+     return false;
+ }
 foreach ($messages as $msg) {
     $id = \get_object_vars($msg)['id'];
     echo "<li>";
     echo $msg->message . " ";
-    echo "<a href='message_update.php?id=$id'>Update</a>";
+    if (hasPermission('edit_message')) {
+        echo "<a href='message_update.php?id=$id' style='margin: 0px 20px 0px 20px'>Update</a>";
+    }
+    if (hasPermission('delete_message')) {
+        echo "<a href='message_delete.php?id=$id'>Delete</a>";
+    }
     echo "</li>";
 }
+
+
 ?>
 </ol>
 <hr>
