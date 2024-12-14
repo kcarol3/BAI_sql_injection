@@ -73,7 +73,7 @@ VALUES (:login,:email,:hash,:salt,:id_status,:password_form, :enc_password)";
             if ($password == $this->aes->decrypt($user_data['enc_password'])) {
                 $_SESSION['logged_in'] = true;
                 $_SESSION['user'] = $login;
-                $_SESSION['expiry_time'] = time() + 3000;
+                $_SESSION['expiry_time'] = time() + 30000;
 
                 $this->get_privileges($login);
                 echo 'Successful login<BR/>';

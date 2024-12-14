@@ -1,6 +1,7 @@
 <?php
 
 include_once "Filter.php";
+
 class Db
 {
     private $pdo;
@@ -14,6 +15,7 @@ class Db
     {
         $this->pdo = $pdo;
     }
+
     private $select_result;
     private $allowed_types = ['public', 'private'];
 
@@ -109,13 +111,21 @@ class Db
 
     public function deleteMessage($message_id)
     {
-        $sql = "DELETE FROM message WHERE id = :id";
-
-        $stmt = $this->pdo->prepare($sql);
-
-        $result = $stmt->execute([':id' => $message_id]);
-
-        return $result;
+        if (isset($_SESSION['delete message'])) {
+            if (filter_var($message_id, FILTER_VALIDATE_INT)) {
+                try {
+                    $sql = "UPDATE `message` SET `deleted`=1 WHERE `id`=:id";
+                    $data = [
+                        'id' => $message_id];
+                    $this->pdo->prepare($sql)->execute($data);
+                    return true;
+                } catch (Exception $e) {
+                    print 'Exception' . $e->getMessage();
+                }
+            }
+        } else
+            echo 'YOU HAVE NO PRIVILEGE TO DELETE MESSAGE <BR/>';
+        return false;
     }
 
 
@@ -137,53 +147,63 @@ class Db
     {
         try {
             $sql = "SELECT p.id,p.name FROM privilege p"
-                ." INNER JOIN user_privilege up ON p.id=up.id_privilege" ." INNER JOIN user u ON u.id=up.id_user"
-                ." WHERE u.login=:login";
+                . " INNER JOIN user_privilege up ON p.id=up.id_privilege" . " INNER JOIN user u ON u.id=up.id_user"
+                . " WHERE u.login=:login";
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute(['login' => $login]);
             $data = $stmt->fetchAll();
             foreach ($data as $row) {
-                $privilege=$row['name'];
-                $_SESSION[$privilege]='YES'; }
-            $data['status']='success';
+                $privilege = $row['name'];
+                $_SESSION[$privilege] = 'YES';
+            }
+            $data['status'] = 'success';
             return $data;
         } catch (Exception $e) {
-            print 'Exception' . $e->getMessage(); }
+            print 'Exception' . $e->getMessage();
+        }
         return [
             'status' => 'failed'
-        ]; }
+        ];
+    }
 
-    function getAllPermissions() {
+    function getAllPermissions()
+    {
         $stmt = $this->pdo->query("SELECT * FROM privilege");
         return $stmt->fetchAll();
     }
 
-    function addPermission($name) {
+    function addPermission($name)
+    {
         $stmt = $this->pdo->prepare("INSERT INTO privilege (name, active) VALUES (:name, 1)");
         return $stmt->execute([':name' => $name]);
     }
 
-    function deletePermission($id) {
+    function deletePermission($id)
+    {
         $stmt = $this->pdo->prepare("DELETE FROM privilege WHERE id = :id");
         return $stmt->execute([':id' => $id]);
     }
 
-    function getAllRoles() {
+    function getAllRoles()
+    {
         $stmt = $this->pdo->query("SELECT * FROM role");
         return $stmt->fetchAll();
     }
 
-    function addRole($roleName, $description) {
+    function addRole($roleName, $description)
+    {
         $stmt = $this->pdo->prepare("INSERT INTO role (role_name, description) VALUES (:role_name, :description)");
         return $stmt->execute([':role_name' => $roleName, ':description' => $description]);
     }
 
-    function deleteRole($roleId) {
+    function deleteRole($roleId)
+    {
         $stmt = $this->pdo->prepare("DELETE FROM role WHERE id = :id");
         return $stmt->execute([':id' => $roleId]);
     }
 
-    function addUserRole($userId, $roleId, $issueTime, $expireTime = null) {
+    function addUserRole($userId, $roleId, $issueTime, $expireTime = null)
+    {
         $stmt = $this->pdo->prepare("
         INSERT INTO user_role (id_user, id_role, issue_time, expire_time)
         VALUES (:id_user, :id_role, :issue_time, :expire_time)
@@ -196,12 +216,14 @@ class Db
         ]);
     }
 
-    function removeUserRole($userRoleId) {
+    function removeUserRole($userRoleId)
+    {
         $stmt = $this->db->prepare("DELETE FROM user_role WHERE id = :id");
         return $stmt->execute([':id' => $userRoleId]);
     }
 
-    function getRolesWithPermissions() {
+    function getRolesWithPermissions()
+    {
         try {
             $sql = "
             SELECT 

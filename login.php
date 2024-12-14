@@ -29,6 +29,13 @@ if (isset($_REQUEST['log_user_in'])) {
 if (isset($_REQUEST['change_password'])) {
     echo $Pdo->changePassword($_REQUEST);
 }
+
+if (isset($_REQUEST['logout'])) {
+    session_unset();
+    session_destroy();
+    header("Location: login.php");
+    exit;
+}
 ?>
 <H2> Main page</H2>
 <hr>
