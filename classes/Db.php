@@ -84,6 +84,17 @@ class Db
             return false;
         }
 
+        try {
+            $sql = "SELECT * FROM message WHERE id=:id";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute(['id' => $id]);
+            $msg_data = $stmt->fetch();
+            $prev_data = $id . "|" . $msg_data['name'] . "|"
+                . $msg_data['type'] . "|" . $msg_data['message'];
+        } catch (Exception $e) {
+            print 'Exception' . $e->getMessage();
+        }
+
         $name = Filter::filter($name, 'name');
         $content = Filter::filter($content, 'content');
 
@@ -95,6 +106,14 @@ class Db
             $stmt->bindParam(':type', $type);
             $stmt->bindParam(':content', $content);
             $stmt->execute();
+
+            $data = [
+                'name' => $name, 'type' => $type, 'content' => $content, 'id' => $id
+            ];
+
+            $new_data = $id . "|" . $data['name'] . "|" . $data['type'] . "|" . $content;
+
+            $this->register_user_activity('edit', 1, $prev_data, $new_data, 'mesage');
             echo "Message updated successfully.<br>";
             return true;
         } catch (PDOException $e) {
@@ -118,6 +137,9 @@ class Db
                     $data = [
                         'id' => $message_id];
                     $this->pdo->prepare($sql)->execute($data);
+
+                    $this->register_user_activity('delete',1, "message id = $message_id", null, 'mesage');
+
                     return true;
                 } catch (Exception $e) {
                     print 'Exception' . $e->getMessage();
@@ -275,4 +297,22 @@ class Db
         }
     }
 
+    public function register_user_activity($action_taken, $row_number, $previous_data, $present_data, $table_affected)
+    {
+        $action_taken = $this->purifier->purify($action_taken);
+        $row_number = $this->purifier->purify($row_number);
+        $previous_data = $this->purifier->purify($previous_data);
+        $present_data = $this->purifier->purify($present_data);
+        $table_affected = $this->purifier->purify($table_affected);
+        try {
+            $sql = "INSERT INTO `user_activity`( `id_user`, `action_taken`, `table_affected`,
+`row_number`, `previous_data`, `new_data`) VALUES (:user_id,:action_taken,:table_affected,:row_number,:previous_data,:new_data)";
+            $data = [
+                'user_id' => 8, 'action_taken' => $action_taken, 'table_affected' => $table_affected, 'row_number' => $row_number, 'previous_data' => $previous_data, 'new_data' => $present_data
+            ];
+            $this->pdo->prepare($sql)->execute($data);
+        } catch (Exception $e) {
+            print ' Exception' . $e->getMessage();
+        }
+    }
 }
