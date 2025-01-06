@@ -1,25 +1,46 @@
 <?php
+
+use Bluerhinos\phpMQTT;
+
 include_once "classes/Page.php";
 include_once "classes/Db.php";
 Page::display_header("Messages");
+
+
 $db = new Db("127.0.0.1", "root", "", "news");
-// adding new message
-if (isset($_REQUEST['add_message'])) {
-    $name = $_REQUEST['name'];
-    $type = $_REQUEST['type'];
-    $content = $_REQUEST['content'];
-    if (!$db->addMessage($name, $type, $content))
-        echo "Adding new message failed";
+
+$host = 'broker.emqx.io';
+$port = 1883;
+$username = '';
+$password = '';
+$clientID = 'php-mqtt-sender';
+
+$mqtt = new phpMQTT($host, $port, $clientID);
+
+if ($mqtt->connect(true, NULL, $username, $password)) {
+    if (isset($_POST['send_message'])) {
+        $message = [
+            'name' => $_POST['name'],
+            'type' => $_POST['type'],
+            'content' => $_POST['content']
+        ];
+        $topic = 'messages/topic';
+        $mqtt->publish($topic, json_encode($message), 0);
+        echo "Message sent to MQTT broker!";
+    }
+    $mqtt->close();
+} else {
+    echo "Failed to connect to MQTT broker!";
 }
 
-if (isset($_REQUEST['update'])) {
-    $id = $_REQUEST['id'];
-    $name = $_REQUEST['name'];
-    $type = $_REQUEST['type'];
-    $content = $_REQUEST['content'];
-    if (!$db->updateMessage($id, $name, $type, $content))
-        echo "Updating new message failed";
-}
+//if (isset($_REQUEST['update'])) {
+//    $id = $_REQUEST['id'];
+//    $name = $_REQUEST['name'];
+//    $type = $_REQUEST['type'];
+//    $content = $_REQUEST['content'];
+//    if (!$db->updateMessage($id, $name, $type, $content))
+//        echo "Updating new message failed";
+//}
 
 
 ?>

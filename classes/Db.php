@@ -1,7 +1,8 @@
 <?php
 
+use Bluerhinos\phpMQTT;
+require('./classes/phpMQTT.php');
 include_once "Filter.php";
-
 class Db
 {
     private $pdo;
@@ -50,6 +51,45 @@ class Db
         return $results;
     }
 
+    public function processMessage()
+    {
+        $host = 'broker.emqx.io';
+        $port = 1883;
+        $username = ''; // Add if required
+        $password = ''; // Add if required
+        $clientID = 'php-mqtt-receiver';
+
+        $mqtt = new phpMQTT($host, $port, $clientID);
+
+        if ($mqtt->connect(true, NULL, $username, $password)) {
+            echo "Connected to MQTT broker";
+            $topics['messages/topic'] = ['qos' => 0, 'function' => function ($topic, $message) {
+                $this->handleMQTTMessage($message);
+            }];
+            $mqtt->subscribe($topics, 0);
+
+
+            $mqtt->close();
+        } else {
+            echo "Failed to connect to MQTT broker.<br>";
+        }
+    }
+
+    private function handleMQTTMessage($message)
+    {
+        $data = json_decode($message, true);
+
+        if ($data && isset($data['name'], $data['type'], $data['content'])) {
+            if ($this->addMessage($data['name'], $data['type'], $data['content'])) {
+                echo "Message saved to the database: $message<br>";
+            } else {
+                echo "Failed to save the message.<br>";
+            }
+        } else {
+            echo "Invalid message format.<br>";
+        }
+    }
+
     public function addMessage($name, $type, $content)
     {
         if (!in_array($type, $this->allowed_types)) {
@@ -60,7 +100,6 @@ class Db
         $name = Filter::filter($name, 'name');
         $content = Filter::filter($content, 'content');
 
-        // SQL query to insert the new message
         $sql = "INSERT INTO message (`name`, `type`, `message`, `deleted`)
                 VALUES (:name, :type, :content, 0)";
         try {
